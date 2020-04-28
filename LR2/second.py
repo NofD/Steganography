@@ -110,7 +110,7 @@ def put_mess():
     
     file_size = os.path.getsize(file_name) # размер изображения в байтах
     mess_size = (len(bit_mess)/8) # размер сообщения в байтах
-    if (file_size - 54 - 16)/8 <= mess_size: # 54 байта - заголовок файла, 16 байт - отступ для правильного извлечения сообщения.
+    if (file_size - 54 - 8)/8 <= mess_size: # 54 байта - заголовок файла, 8 байт - отступ для правильного извлечения сообщения.
         print("\nСлишком большое сообщение.")
         return
 
@@ -128,7 +128,7 @@ def put_mess():
         res.write(new)
         counter -= 1
     
-    for j in range(16):
+    for j in range(8):
         bits = bin(int.from_bytes(start.read(1), sys.byteorder))[2:] # переводим байт в двоичный вид 
         new = (int((bits[:-1] + "0"), 2)).to_bytes(1, sys.byteorder)
         res.write(new)
@@ -150,34 +150,38 @@ def extract_mess():
     # принимает имя файла, если сообщения не найдено, то выводит "сообщения нет"
     container_name = container_file()
 
-    mess_string = ""
+    
     new_substr = ""
-
+    mess_string = ""
     container = open(container_name, 'rb') # открываем файл 
     container.seek(54) # пропускаем заголовок файла
 
     while True:
-        for i in range(16):
+        for i in range(8):
             byte = bin(int.from_bytes(container.read(1), sys.byteorder))[2:] # читаем переводим байт в двоичный вид
             new_substr += byte[-1]
-        if new_substr == "0000000000000000" or new_substr == "1111111111111111":
-            break
-        try:
-            bit_to_str(new_substr)
-        except:
-            break
-        else:
-            mess_string += bit_to_str(new_substr)
+        if new_substr != ("00000000" or "11111111"):
+            mess_string += new_substr
             new_substr = ""
+        else:
+            break
     else:
         print("\nКонец файла")
-
+    
     container.close()
     message = open('message.txt', 'w')
+
     if mess_string:
-        message.write("Сообщение: ")
-        message.write(mess_string)
-        print("\nФайл 'message.txt' создан")
+        try:
+            bit_to_str(mess_string)
+        except:
+            message.write("Сообщение не найдено.")
+            print("\nСообщение не найдено")
+        else:
+            mess_string = bit_to_str(mess_string)
+            message.write("Сообщение: ")
+            message.write(mess_string)
+            print("\nФайл 'message.txt' создан")
     else:
         message.write("Сообщение не найдено.")
         print("\nСообщение не найдено")
